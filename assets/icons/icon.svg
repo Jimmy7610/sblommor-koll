@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="114" fill="#1B5E3B"/>
+  <!-- Stem -->
+  <rect x="248" y="280" width="16" height="120" rx="8" fill="#4CAF7D"/>
+  <!-- Leaves -->
+  <ellipse cx="220" cy="340" rx="36" ry="18" fill="#4CAF7D" transform="rotate(-30 220 340)"/>
+  <ellipse cx="292" cy="360" rx="36" ry="18" fill="#4CAF7D" transform="rotate(30 292 360)"/>
+  <!-- Flower center -->
+  <circle cx="256" cy="220" r="38" fill="#E8B4BC"/>
+  <!-- Petals -->
+  <ellipse cx="256" cy="158" rx="22" ry="38" fill="#F5D0D5"/>
+  <ellipse cx="256" cy="282" rx="22" ry="38" fill="#F5D0D5"/>
+  <ellipse cx="194" cy="220" rx="38" ry="22" fill="#F5D0D5"/>
+  <ellipse cx="318" cy="220" rx="38" ry="22" fill="#F5D0D5"/>
+  <ellipse cx="214" cy="178" rx="22" ry="38" fill="#F5D0D5" transform="rotate(-45 214 178)"/>
+  <ellipse cx="298" cy="178" rx="22" ry="38" fill="#F5D0D5" transform="rotate(45 298 178)"/>
+  <ellipse cx="214" cy="262" rx="22" ry="38" fill="#F5D0D5" transform="rotate(45 214 262)"/>
+  <ellipse cx="298" cy="262" rx="22" ry="38" fill="#F5D0D5" transform="rotate(-45 298 262)"/>
+  <!-- Center dot -->
+  <circle cx="256" cy="220" r="26" fill="#D4788A"/>
+  <circle cx="256" cy="220" r="12" fill="#fff" opacity=".6"/>
+</svg>

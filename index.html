@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1B5E3B">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Blompasset">
+  <meta name="description" content="Privat sommarjobbs-dashboard för S-blommor Uddevalla/Kuröd">
+  <title>Blompasset</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ═══ SPLASH ═══ -->
+    <div id="splash" class="splash" aria-hidden="true">
+      <div class="splash-inner">
+        <div class="splash-bloom">🌸</div>
+        <h1 class="splash-name">Blompasset</h1>
+        <p class="splash-sub">S-blommor · Uddevalla/Kuröd</p>
+        <div class="splash-loader"><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- ═══ SETUP GUIDE ═══ -->
+    <div id="setup-guide" class="setup-guide hidden" role="main">
+      <div class="setup-inner">
+        <div class="setup-header">
+          <div class="setup-bloom">🌼</div>
+          <h1 class="setup-title">Välkommen till<br>Blompasset</h1>
+          <p class="setup-desc">Din personliga sommarjobbs-app</p>
+        </div>
+
+        <div class="setup-steps">
+          <!-- Step 1: Welcome -->
+          <div class="setup-step active" data-step="1">
+            <div class="setup-step-icon">✨</div>
+            <h2>Kom igång på ett par minuter</h2>
+            <p>Appen sparar allt lokalt på din enhet. Vill du synka med Google Sheets kan du koppla det nu — eller göra det senare i Inställningar.</p>
+            <div class="setup-actions">
+              <button class="btn btn-primary" id="setup-configure-sync">Koppla Google Sync</button>
+              <button class="btn btn-ghost" id="setup-skip-sync">Börja utan sync</button>
+            </div>
+          </div>
+
+          <!-- Step 2: Script URL -->
+          <div class="setup-step" data-step="2">
+            <div class="setup-step-icon">🔗</div>
+            <h2>Klistra in Script-URL</h2>
+            <p>Distribuera Apps Script-koden (se README) och klistra in URL:en här.</p>
+            <div class="form-group">
+              <label class="form-label">Google Apps Script URL</label>
+              <input type="url" id="setup-script-url" class="form-input" placeholder="https://script.google.com/macros/s/…/exec">
+            </div>
+            <div class="setup-actions">
+              <button class="btn btn-primary" id="setup-next-pin">Nästa</button>
+              <button class="btn btn-ghost" id="setup-back-1">Tillbaka</button>
+            </div>
+          </div>
+
+          <!-- Step 3: PIN -->
+          <div class="setup-step" data-step="3">
+            <div class="setup-step-icon">🔐</div>
+            <h2>Ange PIN</h2>
+            <p>PIN-koden du angav när du satte upp Apps Script i Google.</p>
+            <div class="form-group">
+              <label class="form-label">PIN</label>
+              <input type="password" id="setup-pin" class="form-input" placeholder="Minst 4 tecken" maxlength="32" autocomplete="new-password">
+            </div>
+            <div class="setup-actions">
+              <button class="btn btn-primary" id="setup-test-connection">Testa anslutning</button>
+              <button class="btn btn-ghost" id="setup-back-2">Tillbaka</button>
+            </div>
+            <div id="setup-test-result" class="setup-test-result hidden"></div>
+          </div>
+
+          <!-- Step 4: Import -->
+          <div class="setup-step" data-step="4">
+            <div class="setup-step-icon">📥</div>
+            <h2>Hämta befintlig data?</h2>
+            <p>Anslutningen fungerar! Vill du hämta befintlig data från Google Sheets?</p>
+            <div class="setup-actions">
+              <button class="btn btn-primary" id="setup-import-data">Hämta data</button>
+              <button class="btn btn-ghost" id="setup-fresh-start">Börja fresh</button>
+            </div>
+          </div>
+
+          <!-- Step 5: Done -->
+          <div class="setup-step" data-step="5">
+            <div class="setup-step-icon">🎉</div>
+            <h2>Klart!</h2>
+            <p>Blompasset är redo att användas. Ha ett fantastiskt sommarjobb!</p>
+            <div class="setup-actions">
+              <button class="btn btn-primary" id="setup-enter-app">Till appen →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress dots -->
+        <div class="setup-progress" aria-hidden="true">
+          <span class="dot active"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MAIN APP ═══ -->
+    <div id="main-app" class="main-app hidden">
+
+      <!-- Content column (wraps header + alerts + pages for correct layout) -->
+      <div class="content-col">
+
+      <!-- Header -->
+      <header class="app-header" id="app-header">
+        <div class="header-inner">
+          <div class="header-title-group">
+            <span class="header-bloom" aria-hidden="true">🌸</span>
+            <span class="header-title">Blompasset</span>
+          </div>
+          <div class="header-actions">
+            <button class="sync-btn" id="sync-btn" title="Sync-status" aria-label="Synkstatus">
+              <span class="sync-dot" id="sync-dot" data-status="unknown"></span>
+              <span class="sync-label" id="sync-label">—</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Alerts banner -->
+      <div id="alerts-banner" class="alerts-banner hidden" role="alert"></div>
+
+      <!-- Page content -->
+      <main class="page-content" id="page-content">
+
+        <!-- ── START / DASHBOARD ── -->
+        <section id="page-dashboard" class="page" data-page="dashboard" role="main">
+          <div class="page-inner" id="dashboard-inner">
+            <!-- Rendered by dashboard.js -->
+          </div>
+        </section>
+
+        <!-- ── BLOMBILEN ── -->
+        <section id="page-blombilen" class="page" data-page="blombilen" role="main">
+          <div class="page-inner">
+            <div class="page-header">
+              <h2 class="page-title">🚐 Blombilen</h2>
+              <div class="page-header-actions">
+                <div class="filter-chips" id="blombilen-filter-chips">
+                  <button class="chip active" data-filter="tomorrow">Imorgon</button>
+                  <button class="chip" data-filter="today">Idag</button>
+                  <button class="chip" data-filter="important">Viktiga</button>
+                  <button class="chip" data-filter="all">Alla</button>
+                </div>
+              </div>
+            </div>
+            <div id="blombilen-list" class="item-list"></div>
+            <button class="fab" id="add-blombilen-btn" aria-label="Lägg till blompost">
+              <span>+</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ── PASS ── -->
+        <section id="page-shifts" class="page" data-page="shifts" role="main">
+          <div class="page-inner">
+            <div class="page-header">
+              <h2 class="page-title">📅 Arbetspass</h2>
+              <div class="page-header-actions">
+                <div class="filter-chips" id="shifts-filter-chips">
+                  <button class="chip active" data-filter="upcoming">Kommande</button>
+                  <button class="chip" data-filter="worked">Jobbade</button>
+                  <button class="chip" data-filter="all">Alla</button>
+                </div>
+              </div>
+            </div>
+            <div id="shifts-list" class="item-list"></div>
+            <button class="fab" id="add-shift-btn" aria-label="Lägg till arbetspass">
+              <span>+</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ── LÖN ── -->
+        <section id="page-salary" class="page" data-page="salary" role="main">
+          <div class="page-inner" id="salary-inner">
+            <!-- Rendered by salaryView.js -->
+          </div>
+        </section>
+
+        <!-- ── INSTÄLLNINGAR ── -->
+        <section id="page-settings" class="page" data-page="settings" role="main">
+          <div class="page-inner" id="settings-inner">
+            <!-- Rendered by settings.js -->
+          </div>
+        </section>
+
+      </main>
+
+      </div><!-- /content-col -->
+
+      <!-- Bottom navigation -->
+      <nav class="bottom-nav" id="bottom-nav" role="navigation" aria-label="Huvudmeny">
+        <button class="nav-item" data-page="dashboard" aria-label="Start">
+          <span class="nav-icon" aria-hidden="true">🏠</span>
+          <span class="nav-label">Start</span>
+        </button>
+        <button class="nav-item" data-page="blombilen" aria-label="Blombilen">
+          <span class="nav-icon" aria-hidden="true">🚐</span>
+          <span class="nav-label">Blombilen</span>
+        </button>
+        <button class="nav-item" data-page="shifts" aria-label="Arbetspass">
+          <span class="nav-icon" aria-hidden="true">📅</span>
+          <span class="nav-label">Pass</span>
+        </button>
+        <button class="nav-item" data-page="salary" aria-label="Lön">
+          <span class="nav-icon" aria-hidden="true">💰</span>
+          <span class="nav-label">Lön</span>
+        </button>
+        <button class="nav-item" data-page="settings" aria-label="Inställningar">
+          <span class="nav-icon" aria-hidden="true">⚙️</span>
+          <span class="nav-label">Inställningar</span>
+        </button>
+      </nav>
+
+    </div><!-- /main-app -->
+
+  </div><!-- /app -->
+
+  <!-- ═══ MODAL ═══ -->
+  <div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div id="modal-container" class="modal-container" tabindex="-1">
+      <div class="modal-drag-handle" aria-hidden="true"></div>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- ═══ TOASTS ═══ -->
+  <div id="toast-container" class="toast-container" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
