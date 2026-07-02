@@ -2,7 +2,7 @@
    Blompasset — Service Worker
    ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'blompasset-v3';
+const CACHE_VERSION = 'blompasset-v6';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_DYNAMIC = `${CACHE_VERSION}-dynamic`;
 
@@ -14,14 +14,13 @@ const STATIC_ASSETS = [
   './js/app.js',
   './js/state.js',
   './js/storage.js',
-  './js/sync.js',
   './js/ui.js',
   './js/router.js',
   './js/dates.js',
   './js/salary.js',
   './js/validation.js',
   './js/exports.js',
-  './js/qr.js',
+  './js/effects.js',
   './js/modules/dashboard.js',
   './js/modules/blombilen.js',
   './js/modules/shifts.js',
@@ -31,6 +30,9 @@ const STATIC_ASSETS = [
   './js/modules/reports.js',
   './js/modules/places.js',
   './assets/icons/icon.svg',
+  './assets/icons/icon-192.png',
+  './assets/icons/icon-512.png',
+  './assets/icons/apple-touch-icon.png',
 ];
 
 /* ── Install ── */
@@ -58,12 +60,13 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // Skip non-GET and cross-origin
+  // Skip non-GET
   if (request.method !== 'GET') return;
-  if (!request.url.startsWith(self.location.origin)) return;
 
-  // Skip Google Apps Script requests (always needs network)
-  if (request.url.includes('script.google.com')) return;
+  // Cross-origin: cacha Google Fonts (så typsnitten funkar offline), skippa resten
+  const isFont = request.url.startsWith('https://fonts.googleapis.com') ||
+                 request.url.startsWith('https://fonts.gstatic.com');
+  if (!request.url.startsWith(self.location.origin) && !isFont) return;
 
   event.respondWith(
     caches.match(request).then((cached) => {
@@ -81,17 +84,6 @@ self.addEventListener('fetch', (event) => {
       });
     })
   );
-});
-
-/* ── Background sync (queue flush) ── */
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'blompasset-sync') {
-    event.waitUntil(
-      self.clients.matchAll().then((clients) => {
-        clients.forEach((c) => c.postMessage({ type: 'SYNC_REQUESTED' }));
-      })
-    );
-  }
 });
 
 /* ── Message from app ── */

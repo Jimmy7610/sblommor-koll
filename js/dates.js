@@ -113,14 +113,3 @@ export function getMonthDays(monthStr) {
   }
   return days;
 }
-
-export function formatLastSync(isoStr) {
-  if (!isoStr) return 'Aldrig';
-  const d = new Date(isoStr);
-  const now = new Date();
-  const diff = Math.floor((now - d) / 1000);
-  if (diff < 60)   return 'Nyss';
-  if (diff < 3600) return `${Math.floor(diff / 60)} min sedan`;
-  if (diff < 86400) return d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-  return d.toLocaleDateString('sv-SE', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-}

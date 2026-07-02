@@ -1,67 +1,253 @@
 /* ══════════════════════════════════════════
-   storage.js — localStorage persistence
+   storage.js — Trippel-säkrad lagring
+   1. localStorage  (snabb, synkron)
+   2. IndexedDB     (robust, överlever ofta
+                     när localStorage rensas)
+   3. Dagliga snapshots i IndexedDB (7 dagar)
+   + navigator.storage.persist() så att
+   webbläsaren inte får rensa datan.
    ══════════════════════════════════════════ */
 
-const STORAGE_KEY = 'blompasset_data';
-const SETTINGS_KEY = 'blompasset_settings_local';
-const SYNC_QUEUE_KEY = 'blompasset_sync_queue';
+const STORAGE_KEY   = 'blompasset_data';
+const PREV_KEY      = 'blompasset_data_prev';
+const DB_NAME       = 'blompasset-db';
+const DB_VERSION    = 1;
+const STORE_MAIN    = 'state';
+const STORE_SNAPS   = 'snapshots';
+const MAX_SNAPSHOTS = 7;
 
-export function saveState(state) {
-  try {
-    const toSave = {
-      shifts: state.shifts,
-      blombilen: state.blombilen,
-      places: state.places,
-      settings: state.settings,
-      ui: state.ui,
-      _savedAt: new Date().toISOString(),
+let _lastSavedAt = null;
+let _idbOk = null; // null = okänt, true/false efter första försöket
+
+/* ── IndexedDB helpers ── */
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_MAIN))  db.createObjectStore(STORE_MAIN);
+      if (!db.objectStoreNames.contains(STORE_SNAPS)) db.createObjectStore(STORE_SNAPS);
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-  } catch (e) {
-    console.error('Storage save failed:', e);
-  }
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
 }
 
-export function loadState() {
+function idbPut(store, key, value) {
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(value, key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror    = () => { db.close(); reject(tx.error); };
+  }));
+}
+
+function idbGet(store, key) {
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const tx  = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => { db.close(); resolve(req.result ?? null); };
+    req.onerror   = () => { db.close(); reject(req.error); };
+  }));
+}
+
+function idbKeys(store) {
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const tx  = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAllKeys();
+    req.onsuccess = () => { db.close(); resolve(req.result || []); };
+    req.onerror   = () => { db.close(); reject(req.error); };
+  }));
+}
+
+function idbDelete(store, key) {
+  return idbOpen().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror    = () => { db.close(); reject(tx.error); };
+  }));
+}
+
+/* ── Spara: localStorage direkt + IndexedDB + dagligt snapshot ── */
+export function saveState(state) {
+  const toSave = {
+    shifts:    state.shifts,
+    blombilen: state.blombilen,
+    places:    state.places,
+    settings:  state.settings,
+    ui:        state.ui,
+    _savedAt:  new Date().toISOString(),
+  };
+  const json = JSON.stringify(toSave);
+
+  // 1) localStorage — behåll föregående version som rollback
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
+    const prev = localStorage.getItem(STORAGE_KEY);
+    if (prev) localStorage.setItem(PREV_KEY, prev);
+    localStorage.setItem(STORAGE_KEY, json);
+    _lastSavedAt = toSave._savedAt;
   } catch (e) {
-    console.error('Storage load failed:', e);
-    return null;
+    console.error('localStorage save failed:', e);
   }
+
+  // 2) IndexedDB — asynkront, oberoende kopia
+  idbPut(STORE_MAIN, 'current', toSave)
+    .then(() => { _idbOk = true; })
+    .catch(e => { _idbOk = false; console.error('IndexedDB save failed:', e); });
+
+  // 3) Dagligt snapshot (max ett per dag, behåll 7 senaste)
+  const day = toSave._savedAt.slice(0, 10);
+  idbPut(STORE_SNAPS, day, toSave)
+    .then(() => pruneSnapshots())
+    .catch(() => {});
+}
+
+async function pruneSnapshots() {
+  try {
+    const keys = (await idbKeys(STORE_SNAPS)).sort();
+    while (keys.length > MAX_SNAPSHOTS) {
+      await idbDelete(STORE_SNAPS, keys.shift());
+    }
+  } catch (_) {}
+}
+
+/* ── Ladda: bästa tillgängliga källa ── */
+function parseOrNull(raw) {
+  try {
+    const data = JSON.parse(raw);
+    return isValidState(data) ? data : null;
+  } catch { return null; }
+}
+
+function isValidState(data) {
+  return data && typeof data === 'object' && Array.isArray(data.shifts) && Array.isArray(data.blombilen);
+}
+
+export async function loadStateAsync() {
+  // 1) localStorage (primär)
+  const local = parseOrNull(localStorage.getItem(STORAGE_KEY));
+
+  // 2) IndexedDB (kan vara nyare om localStorage rensats)
+  let idb = null;
+  try {
+    const fromIdb = await idbGet(STORE_MAIN, 'current');
+    if (isValidState(fromIdb)) idb = fromIdb;
+    _idbOk = true;
+  } catch (e) {
+    _idbOk = false;
+  }
+
+  // Välj den senast sparade av de två
+  let best = local;
+  let source = 'localStorage';
+  if (idb && (!local || (idb._savedAt || '') > (local._savedAt || ''))) {
+    best = idb; source = 'indexeddb';
+  }
+
+  // 3) Rollback-kopian i localStorage
+  if (!best) {
+    best = parseOrNull(localStorage.getItem(PREV_KEY));
+    if (best) source = 'rollback';
+  }
+
+  // 4) Senaste dagliga snapshot
+  if (!best) {
+    try {
+      const keys = (await idbKeys(STORE_SNAPS)).sort();
+      if (keys.length) {
+        const snap = await idbGet(STORE_SNAPS, keys[keys.length - 1]);
+        if (isValidState(snap)) { best = snap; source = 'snapshot'; }
+      }
+    } catch (_) {}
+  }
+
+  if (best) {
+    _lastSavedAt = best._savedAt || null;
+    // Om vi räddade data från en sekundär källa: skriv tillbaka till alla lager direkt
+    if (source !== 'localStorage') {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(best)); } catch (_) {}
+      idbPut(STORE_MAIN, 'current', best).catch(() => {});
+      console.info(`Blompasset: data återställd från ${source}`);
+    }
+  }
+  return best;
+}
+
+/* Synkron fallback (används inte av boot, men behålls för kompatibilitet) */
+export function loadState() {
+  return parseOrNull(localStorage.getItem(STORAGE_KEY));
 }
 
 export function clearState() {
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(PREV_KEY);
+  idbPut(STORE_MAIN, 'current', null).catch(() => {});
 }
 
-/* ── Sync queue ── */
-export function saveSyncQueue(queue) {
+/* ── Beständig lagring — be webbläsaren att aldrig rensa ── */
+export async function requestPersistentStorage() {
   try {
-    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
-  } catch (e) {}
+    if (navigator.storage?.persist) {
+      const already = await navigator.storage.persisted();
+      if (already) return true;
+      return await navigator.storage.persist();
+    }
+  } catch (_) {}
+  return false;
 }
 
-export function loadSyncQueue() {
+export async function getStorageInfo() {
+  const info = {
+    persisted: false,
+    usage: null,
+    quota: null,
+    lastSavedAt: _lastSavedAt,
+    idbOk: _idbOk,
+  };
   try {
-    const raw = localStorage.getItem(SYNC_QUEUE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
-  }
+    if (navigator.storage?.persisted) info.persisted = await navigator.storage.persisted();
+    if (navigator.storage?.estimate) {
+      const est = await navigator.storage.estimate();
+      info.usage = est.usage ?? null;
+      info.quota = est.quota ?? null;
+    }
+  } catch (_) {}
+  return info;
 }
 
-export function clearSyncQueue() {
-  localStorage.removeItem(SYNC_QUEUE_KEY);
+/* ── Snapshots: lista + återställ ── */
+export async function listSnapshots() {
+  try {
+    const keys = (await idbKeys(STORE_SNAPS)).sort().reverse();
+    const out = [];
+    for (const key of keys) {
+      const snap = await idbGet(STORE_SNAPS, key);
+      if (isValidState(snap)) {
+        out.push({
+          day: key,
+          savedAt: snap._savedAt,
+          shifts: snap.shifts.length,
+          blombilen: snap.blombilen.length,
+        });
+      }
+    }
+    return out;
+  } catch (_) { return []; }
+}
+
+export async function getSnapshot(day) {
+  try {
+    const snap = await idbGet(STORE_SNAPS, day);
+    return isValidState(snap) ? snap : null;
+  } catch (_) { return null; }
 }
 
 /* ── Export helpers ── */
 export function exportJSON(state) {
   const data = {
     _export: 'Blompasset',
-    _version: 1,
+    _version: 2,
     _exportedAt: new Date().toISOString(),
     shifts: state.shifts,
     blombilen: state.blombilen,

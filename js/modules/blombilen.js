@@ -6,7 +6,6 @@ import { getState, addBlombilen, updateBlombilen, deleteBlombilen } from '../sta
 import { openModal, closeModal, showToast, confirm, emptyState, esc } from '../ui.js';
 import { today, tomorrow, formatDate, relativeDate } from '../dates.js';
 import { validateBlombilen, showFieldErrors, hasErrors } from '../validation.js';
-import { enqueue } from '../sync.js';
 
 let _currentFilter = 'tomorrow';
 
@@ -96,12 +95,12 @@ function bindItemEvents(list) {
     if (!btn) return;
     const { action, id } = btn.dataset;
 
-    if (action === 'pack')    { updateBlombilen(id, { status: 'packed' }); enqueue({ type: 'update', entity: 'blombilen', id }); showToast('Markerad som packad ✓', 'success'); applyFilter(_currentFilter, getState().blombilen); }
-    if (action === 'deliver') { updateBlombilen(id, { status: 'delivered' }); enqueue({ type: 'update', entity: 'blombilen', id }); showToast('Markerad som levererad ✓', 'success'); applyFilter(_currentFilter, getState().blombilen); }
+    if (action === 'pack')    { updateBlombilen(id, { status: 'packed' }); showToast('Markerad som packad ✓', 'success'); applyFilter(_currentFilter, getState().blombilen); }
+    if (action === 'deliver') { updateBlombilen(id, { status: 'delivered' }); showToast('Markerad som levererad ✓', 'success'); applyFilter(_currentFilter, getState().blombilen); }
     if (action === 'edit')    { openBlombilenModal(id); }
     if (action === 'delete') {
       const ok = await confirm('Ta bort den här Blombilen-posten?');
-      if (ok) { deleteBlombilen(id); enqueue({ type: 'delete', entity: 'blombilen', id }); showToast('Borttagen', 'info'); applyFilter(_currentFilter, getState().blombilen); }
+      if (ok) { deleteBlombilen(id); showToast('Borttagen', 'info'); applyFilter(_currentFilter, getState().blombilen); }
     }
   });
 }
@@ -288,8 +287,8 @@ function bindBlombilenForm(editId, existing) {
     const errors = validateBlombilen(data);
     if (hasErrors(errors)) { showFieldErrors(form, errors); return; }
 
-    if (editId) { updateBlombilen(editId, data); enqueue({ type: 'update', entity: 'blombilen', id: editId }); showToast('Sparad ✓', 'success'); }
-    else        { addBlombilen(data); enqueue({ type: 'add', entity: 'blombilen' }); showToast('Tillagd ✓', 'success'); }
+    if (editId) { updateBlombilen(editId, data); showToast('Sparad ✓', 'success'); }
+    else        { addBlombilen(data); showToast('Tillagd ✓', 'success'); }
 
     closeModal();
     applyFilter(_currentFilter, getState().blombilen);

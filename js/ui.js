@@ -83,22 +83,24 @@ export function confirm(message, { confirmText = 'Ja, ta bort', cancelText = 'Av
   });
 }
 
-/* ── Sync status indicator ── */
-export function updateSyncIndicator(sync) {
-  const dot   = document.getElementById('sync-dot');
-  const label = document.getElementById('sync-label');
+/* ── Spar-indikator — visar att datan är säkrad lokalt ── */
+let _saveFlashTimer = null;
+
+export function updateSaveIndicator() {
+  const dot   = document.getElementById('save-dot');
+  const label = document.getElementById('save-label');
   if (!dot || !label) return;
 
-  const statusMap = {
-    synced:  { label: 'Synkat', status: 'synced' },
-    pending: { label: 'Väntar', status: 'pending' },
-    error:   { label: 'Fel',    status: 'error' },
-    offline: { label: 'Offline',status: 'offline' },
-    unknown: { label: '—',      status: 'unknown' },
-  };
-  const s = statusMap[sync.status] || statusMap.unknown;
-  dot.setAttribute('data-status', s.status);
-  label.textContent = s.label;
+  // Blinka "Sparar…" kort, landa sedan i "Sparad HH:MM"
+  dot.setAttribute('data-status', 'pending');
+  label.textContent = 'Sparar…';
+
+  clearTimeout(_saveFlashTimer);
+  _saveFlashTimer = setTimeout(() => {
+    const t = new Date().toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    dot.setAttribute('data-status', 'synced');
+    label.textContent = `Sparad ${t}`;
+  }, 500);
 }
 
 /* ── Alerts banner ── */

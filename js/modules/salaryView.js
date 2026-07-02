@@ -7,7 +7,6 @@ import { calcMonthSummary } from '../salary.js';
 import { currentMonth, prevMonth, nextMonth, monthLabel, formatCurrency, formatHours } from '../dates.js';
 import { doExportCSV, doExportJSON, doPrint } from '../exports.js';
 import { openModal, closeModal, showToast, esc } from '../ui.js';
-import { enqueue } from '../sync.js';
 
 let _month = currentMonth();
 

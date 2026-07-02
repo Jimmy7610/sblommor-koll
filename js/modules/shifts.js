@@ -6,7 +6,6 @@ import { getState, addShift, updateShift, deleteShift } from '../state.js';
 import { openModal, closeModal, showToast, confirm, emptyState, esc } from '../ui.js';
 import { today, formatDate, formatTime, calcHours, formatHours, relativeDate } from '../dates.js';
 import { validateShift, showFieldErrors, hasErrors } from '../validation.js';
-import { enqueue } from '../sync.js';
 
 let _currentFilter = 'upcoming';
 
@@ -96,14 +95,13 @@ async function handleShiftAction(e) {
 
   if (action === 'worked') {
     updateShift(id, { status: 'worked' });
-    enqueue({ type: 'update', entity: 'shifts', id });
     showToast('Pass markerat som jobbat ✓', 'success');
     applyFilter(_currentFilter);
   }
   if (action === 'edit')   openShiftModal(id);
   if (action === 'delete') {
     const ok = await confirm('Ta bort det här arbetspasset?');
-    if (ok) { deleteShift(id); enqueue({ type: 'delete', entity: 'shifts', id }); showToast('Borttaget', 'info'); applyFilter(_currentFilter); }
+    if (ok) { deleteShift(id); showToast('Borttaget', 'info'); applyFilter(_currentFilter); }
   }
 }
 
@@ -240,8 +238,8 @@ function bindShiftForm(editId) {
     const errors = validateShift(data);
     if (hasErrors(errors)) { showFieldErrors(form, errors); return; }
 
-    if (editId) { updateShift(editId, data); enqueue({ type: 'update', entity: 'shifts', id: editId }); showToast('Sparad ✓', 'success'); }
-    else        { addShift(data); enqueue({ type: 'add', entity: 'shifts' }); showToast('Pass tillagt ✓', 'success'); }
+    if (editId) { updateShift(editId, data); showToast('Sparad ✓', 'success'); }
+    else        { addShift(data); showToast('Pass tillagt ✓', 'success'); }
 
     closeModal();
     applyFilter(_currentFilter);

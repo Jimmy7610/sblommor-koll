@@ -8,7 +8,8 @@ import { showToast } from './ui.js';
 
 export function doExportJSON() {
   exportJSON(getState());
-  showToast('JSON-backup nedladdad', 'success');
+  setState({ settings: { ...getState().settings, lastBackupAt: new Date().toISOString() } });
+  showToast('Säkerhetskopia nedladdad ✓', 'success');
 }
 
 export function doExportCSV(month) {

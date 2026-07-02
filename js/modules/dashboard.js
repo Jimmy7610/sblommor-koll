@@ -12,7 +12,7 @@ import { updateAlerts } from '../ui.js';
 
 export function renderDashboard() {
   const state    = getState();
-  const { shifts, blombilen, settings, sync } = state;
+  const { shifts, blombilen, settings } = state;
   const todayStr    = today();
   const tomorrowStr = tomorrow();
   const month       = currentMonth();
@@ -42,17 +42,27 @@ export function renderDashboard() {
 
   const hour = new Date().getHours();
   const greeting = hour < 10 ? 'God morgon' : hour < 12 ? 'God förmiddag' : hour < 17 ? 'God eftermiddag' : 'God kväll';
+  const storyLine = hour < 10
+    ? 'Blommorna vaknar — dags att se vad dagen bär med sig.'
+    : hour < 17
+      ? 'Mitt i blomningen. Så här ser din dag ut.'
+      : 'Dagen knoppar av sig. Här är läget inför imorgon.';
+  const dateLine = new Date().toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
 
   const html = `
     <div class="dashboard-section">
-      <p class="dashboard-greeting">${greeting}, <strong>Jimmy! 🌸</strong></p>
+      <div class="story-intro">
+        <div class="story-kicker">${dateLine}</div>
+        <h1 class="story-greeting">${greeting},<br>Jimmy 🌸</h1>
+        <p class="story-line">${storyLine}</p>
+      </div>
     </div>
 
-    <!-- Next shift hero -->
+    <!-- Kapitel 1: Nästa pass -->
     <div class="dashboard-section">
       ${nextShift ? `
         <div class="hero-card">
-          <div class="hero-card-label">Nästa arbetspass</div>
+          <div class="hero-card-label">Kapitel 1 · Nästa arbetspass</div>
           <div class="hero-card-value">${formatTime(nextShift.startTime)} – ${formatTime(nextShift.endTime)}</div>
           <div class="hero-card-sub">${formatDate(nextShift.date, 'long')}</div>
           ${nextShift.date === todayStr ? '<div class="hero-card-badge">🕐 Idag</div>'
@@ -70,36 +80,36 @@ export function renderDashboard() {
       `}
     </div>
 
-    <!-- Stats row -->
+    <!-- Kapitel 2: Månadens skörd -->
     <div class="dashboard-section">
       <div class="section-header">
-        <span class="section-title">📊 ${month.replace('-', '/').replace(/^0/, '')}</span>
+        <span class="section-title">📊 Kapitel 2 · Månadens skörd</span>
         <button class="section-link" data-nav="salary">Rapport →</button>
       </div>
       <div class="stat-grid">
         <div class="stat-card">
           <div class="stat-label">Jobbade tim</div>
-          <div class="stat-value">${summary.worked.hours.toFixed(1)}<span class="stat-unit"> h</span></div>
+          <div class="stat-value"><span data-countup="${summary.worked.hours}" data-decimals="1">${summary.worked.hours.toFixed(1)}</span><span class="stat-unit"> h</span></div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Planerade tim</div>
-          <div class="stat-value">${summary.planned.hours.toFixed(1)}<span class="stat-unit"> h</span></div>
+          <div class="stat-value"><span data-countup="${summary.planned.hours}" data-decimals="1">${summary.planned.hours.toFixed(1)}</span><span class="stat-unit"> h</span></div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Lön hittills</div>
-          <div class="stat-value" style="font-size:16px">${formatCurrency(summary.worked.net)}</div>
+          <div class="stat-value" style="font-size:16px"><span data-countup="${Math.round(summary.worked.net)}" data-suffix=" kr">${formatCurrency(summary.worked.net)}</span></div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Prognos netto</div>
-          <div class="stat-value" style="font-size:16px">${formatCurrency(summary.worked.net + summary.planned.net)}</div>
+          <div class="stat-value" style="font-size:16px"><span data-countup="${Math.round(summary.worked.net + summary.planned.net)}" data-suffix=" kr">${formatCurrency(summary.worked.net + summary.planned.net)}</span></div>
         </div>
       </div>
     </div>
 
-    <!-- Blombilen imorgon -->
+    <!-- Kapitel 3: Blombilen imorgon -->
     <div class="dashboard-section">
       <div class="section-header">
-        <span class="section-title">🚐 Blombilen imorgon</span>
+        <span class="section-title">🚐 Kapitel 3 · Blombilen imorgon</span>
         <button class="section-link" data-nav="blombilen">Visa →</button>
       </div>
       ${tomorrowItems.length ? `
@@ -210,7 +220,8 @@ function buildChecklist(state, todayStr, tomorrowStr, nextShift, unpackedCount) 
   items.push({ text: 'Dagens arbetspass markerat', done: !todayShift });
   items.push({ text: `Blombilen till imorgon packad`, done: unpackedCount === 0 && state.blombilen.some(b => b.date === tomorrowStr) });
   items.push({ text: 'Timlön inställd', done: !!state.settings.hourlyRate });
-  items.push({ text: 'Google Sync aktiv', done: !!state.settings.googleScriptUrl });
+  const backupThisMonth = (state.settings.lastBackupAt || '').slice(0, 7) === new Date().toISOString().slice(0, 7);
+  items.push({ text: 'Säkerhetskopia exporterad denna månad', done: backupThisMonth });
   return items;
 }
 

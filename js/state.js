@@ -2,7 +2,7 @@
    state.js — Central state with pub/sub
    ══════════════════════════════════════════ */
 
-import { loadState, saveState } from './storage.js';
+import { loadState, loadStateAsync, saveState } from './storage.js';
 
 const DEFAULT_STATE = {
   shifts: [],
@@ -18,17 +18,7 @@ const DEFAULT_STATE = {
     vacationPayRate: 12,
     defaultOB: false,
     defaultOBRate: 0,
-    googleScriptUrl: '',
-    googlePin: '',
-    autoSync: true,
-    syncOnChange: true,
-    setupComplete: false,
-  },
-  sync: {
-    status: 'unknown',   // unknown | synced | pending | error | offline
-    lastSync: null,
-    queueCount: 0,
-    lastError: null,
+    lastBackupAt: null,
   },
   ui: {
     activePage: 'dashboard',
@@ -55,11 +45,6 @@ export function setState(updates, { persist = true, notify = true } = {}) {
   if (notify) emit('change', _state);
 }
 
-export function setSync(updates) {
-  _state.sync = { ..._state.sync, ...updates };
-  emit('syncChange', _state.sync);
-}
-
 export function on(event, handler) {
   if (!_listeners[event]) _listeners[event] = [];
   _listeners[event].push(handler);
@@ -80,11 +65,14 @@ export function emit(event, data) {
 
 export function initState() {
   const saved = loadState();
-  if (saved) {
-    _state = deepMerge(DEFAULT_STATE, saved);
-    // Reset transient UI sync state
-    _state.sync.status = navigator.onLine ? 'unknown' : 'offline';
-  }
+  if (saved) _state = deepMerge(DEFAULT_STATE, saved);
+  return _state;
+}
+
+/* Async boot: laddar från bästa lagringskälla (localStorage → IndexedDB → snapshot) */
+export async function initStateAsync() {
+  const saved = await loadStateAsync();
+  if (saved) _state = deepMerge(DEFAULT_STATE, saved);
   return _state;
 }
 

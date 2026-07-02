@@ -70,10 +70,6 @@ export function getAlerts(state) {
   const urgentUnpacked = blombilen.filter(b => b.priority === 'urgent' && b.status === 'to-pack');
   if (urgentUnpacked.length) alerts.push({ icon: '🔴', text: `${urgentUnpacked.length} akuta Blombilen-poster ej packade` });
 
-  if (!settings.googleScriptUrl) alerts.push({ icon: '☁️', text: `Google Sync är inte inställd` });
-  else if (state.sync.status === 'pending') alerts.push({ icon: '⏳', text: `Google Sync väntar på uppladdning` });
-  else if (state.sync.status === 'error')   alerts.push({ icon: '⚠️', text: `Sync-fel: ${state.sync.lastError || 'okänt fel'}` });
-
   if (!settings.hourlyRate) alerts.push({ icon: '💰', text: `Timlön är inte inställd` });
 
   return alerts;
