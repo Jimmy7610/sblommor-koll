@@ -61,6 +61,7 @@ function renderGrouped(shifts) {
 function renderShiftItem(s) {
   const hours = calcHours(s);
   const todayStr = today();
+  const isDayOff = s.status === 'sick' || s.status === 'off';
 
   return `
     <div class="list-item shift-item" data-id="${s.id}">
@@ -70,8 +71,13 @@ function renderShiftItem(s) {
             <div style="font-size:12px;font-weight:700;color:var(--c-text-muted);letter-spacing:.4px;text-transform:uppercase;margin-bottom:2px">
               ${formatDate(s.date, 'day')}${s.date === todayStr ? ' · <span style="color:var(--c-primary)">Idag</span>' : ''}
             </div>
+            ${isDayOff ? `
+            <div class="shift-time">${s.status === 'sick' ? '🤒 Sjukdag' : '🌴 Ledig dag'}</div>
+            <div class="shift-duration">Räknas inte in i lönen</div>
+            ` : `
             <div class="shift-time">${formatTime(s.startTime)} – ${formatTime(s.endTime)}</div>
             <div class="shift-duration">${formatHours(hours)}${s.breakMinutes ? ` · ${s.breakMinutes} min rast` : ''}</div>
+            `}
           </div>
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
             <span class="badge badge-${s.status}">${statusLabel(s.status)}</span>
@@ -136,34 +142,39 @@ export function openShiftModal(editId = null) {
           <input type="date" name="date" id="field-date" class="form-input" value="${s?.date || todayStr}" required>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Starttid <span>*</span></label>
-            <input type="time" name="startTime" id="field-startTime" class="form-input" value="${s?.startTime || '07:00'}" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Sluttid <span>*</span></label>
-            <input type="time" name="endTime" id="field-endTime" class="form-input" value="${s?.endTime || '16:00'}" required>
-          </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select name="status" id="field-status" class="form-select">
+            <option value="planned" ${s?.status==='planned'      ? 'selected':''}>Planerat</option>
+            <option value="worked"  ${!s || s.status==='worked'  ? 'selected':''}>Jobbat</option>
+            <option value="sick"    ${s?.status==='sick'         ? 'selected':''}>Sjuk</option>
+            <option value="off"     ${s?.status==='off'          ? 'selected':''}>Ledig</option>
+          </select>
         </div>
 
-        <div class="form-row">
+        <div id="time-section">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Starttid <span>*</span></label>
+              <input type="time" name="startTime" id="field-startTime" class="form-input" value="${s?.startTime || '07:00'}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Sluttid <span>*</span></label>
+              <input type="time" name="endTime" id="field-endTime" class="form-input" value="${s?.endTime || '16:00'}">
+            </div>
+          </div>
+
           <div class="form-group">
             <label class="form-label">Rast (minuter)</label>
             <input type="number" name="breakMinutes" class="form-input" value="${s?.breakMinutes ?? 0}" min="0" max="240">
           </div>
-          <div class="form-group">
-            <label class="form-label">Status</label>
-            <select name="status" class="form-select">
-              <option value="planned" ${s?.status==='planned'      ? 'selected':''}>Planerat</option>
-              <option value="worked"  ${!s || s.status==='worked'  ? 'selected':''}>Jobbat</option>
-              <option value="sick"    ${s?.status==='sick'         ? 'selected':''}>Sjuk</option>
-              <option value="off"     ${s?.status==='off'          ? 'selected':''}>Ledig</option>
-            </select>
-          </div>
         </div>
 
-        <div class="settings-card" style="margin-bottom:18px">
+        <div id="no-time-info" class="hidden" style="padding:12px 14px;background:var(--c-border-soft);border-radius:var(--radius-md);font-size:13px;color:var(--c-text-muted);margin-bottom:18px">
+          🌿 Sjuk-/ledigdagar registreras utan tider och räknas inte in i lönen.
+        </div>
+
+        <div class="settings-card" id="ob-section" style="margin-bottom:18px">
           <div class="toggle-row">
             <div class="toggle-info">
               <div class="toggle-label">OB-tillägg</div>
@@ -204,6 +215,20 @@ function bindShiftForm(editId) {
   const obToggle = document.getElementById('ob-toggle');
   const obRateRow = document.getElementById('ob-rate-row');
   const preview   = document.getElementById('duration-preview');
+  const statusSel = document.getElementById('field-status');
+
+  const isDayOff = () => statusSel?.value === 'sick' || statusSel?.value === 'off';
+
+  // Sjuk/Ledig: dölj tider, rast, OB och tidsförhandsvisning
+  const updateTimeVisibility = () => {
+    const off = isDayOff();
+    document.getElementById('time-section')?.classList.toggle('hidden', off);
+    document.getElementById('ob-section')?.classList.toggle('hidden', off);
+    document.getElementById('no-time-info')?.classList.toggle('hidden', !off);
+    preview?.classList.toggle('hidden', off);
+  };
+  statusSel?.addEventListener('change', updateTimeVisibility);
+  updateTimeVisibility();
 
   obToggle?.addEventListener('change', () => { obRateRow?.classList.toggle('hidden', !obToggle.checked); });
 
@@ -224,14 +249,15 @@ function bindShiftForm(editId) {
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
     const fd = new FormData(form);
+    const off = isDayOff();
     const data = {
       date:         fd.get('date'),
-      startTime:    fd.get('startTime'),
-      endTime:      fd.get('endTime'),
-      breakMinutes: Number(fd.get('breakMinutes') || 0),
+      startTime:    off ? '' : fd.get('startTime'),
+      endTime:      off ? '' : fd.get('endTime'),
+      breakMinutes: off ? 0  : Number(fd.get('breakMinutes') || 0),
       status:       fd.get('status'),
-      hasOB:        obToggle?.checked || false,
-      obRate:       Number(fd.get('obRate') || 0),
+      hasOB:        off ? false : (obToggle?.checked || false),
+      obRate:       off ? 0  : Number(fd.get('obRate') || 0),
       note:         (fd.get('note') || '').trim(),
     };
 

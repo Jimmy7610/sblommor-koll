@@ -5,10 +5,15 @@
 export function validateShift(data) {
   const errors = {};
   if (!data.date) errors.date = 'Datum krävs';
-  if (!data.startTime) errors.startTime = 'Starttid krävs';
-  if (!data.endTime) errors.endTime = 'Sluttid krävs';
-  if (data.startTime && data.endTime && data.startTime === data.endTime) {
-    errors.endTime = 'Sluttid kan inte vara samma som starttid';
+
+  // Sjuk/Ledig registreras utan tider
+  const isDayOff = data.status === 'sick' || data.status === 'off';
+  if (!isDayOff) {
+    if (!data.startTime) errors.startTime = 'Starttid krävs';
+    if (!data.endTime) errors.endTime = 'Sluttid krävs';
+    if (data.startTime && data.endTime && data.startTime === data.endTime) {
+      errors.endTime = 'Sluttid kan inte vara samma som starttid';
+    }
   }
   return errors;
 }

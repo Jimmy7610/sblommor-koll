@@ -2,7 +2,7 @@
    Blompasset — Service Worker
    ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'blompasset-v8';
+const CACHE_VERSION = 'blompasset-v9';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_DYNAMIC = `${CACHE_VERSION}-dynamic`;
 
