@@ -25,7 +25,7 @@ function applyFilter(filter, blombilen) {
   switch (filter) {
     case 'today':     items = blombilen.filter(b => b.date === todayStr); break;
     case 'tomorrow':  items = blombilen.filter(b => b.date === tomorrowStr); break;
-    case 'important': items = blombilen.filter(b => b.priority !== 'normal'); break;
+    case 'important': items = blombilen.filter(b => b.priority === 'important' || b.priority === 'urgent'); break;
     default:          items = [...blombilen];
   }
   items.sort((a, b) => a.date.localeCompare(b.date) || priorityOrder(a.priority) - priorityOrder(b.priority));
@@ -147,6 +147,7 @@ export function openBlombilenModal(editId = null) {
               <option value="normal"    ${!existing || existing.priority==='normal'    ? 'selected':''}>Normal</option>
               <option value="important" ${existing?.priority==='important'             ? 'selected':''}>Viktigt</option>
               <option value="urgent"    ${existing?.priority==='urgent'               ? 'selected':''}>Akut</option>
+              <option value="other"     ${existing?.priority==='other'                ? 'selected':''}>Övrigt</option>
             </select>
           </div>
         </div>
@@ -167,6 +168,7 @@ export function openBlombilenModal(editId = null) {
             <option value="to-pack"   ${!existing || existing.status==='to-pack'  ? 'selected':''}>Att packa</option>
             <option value="packed"    ${existing?.status==='packed'               ? 'selected':''}>Packad</option>
             <option value="delivered" ${existing?.status==='delivered'            ? 'selected':''}>Levererad</option>
+            <option value="other"     ${existing?.status==='other'                ? 'selected':''}>Övrigt</option>
           </select>
         </div>
 
@@ -323,9 +325,9 @@ function collectStructRows(form) {
 }
 
 /* ── Labels / helpers ── */
-function priorityOrder(p) { return { urgent: 0, important: 1, normal: 2 }[p] ?? 2; }
-function priorityLabel(p) { return { normal: 'Normal', important: '⭐ Viktigt', urgent: '🔴 Akut' }[p] ?? p; }
-function statusLabel(s)   { return { 'to-pack': 'Att packa', 'packed': '✅ Packad', 'delivered': '🏪 Levererad' }[s] ?? s; }
+function priorityOrder(p) { return { urgent: 0, important: 1, normal: 2, other: 3 }[p] ?? 2; }
+function priorityLabel(p) { return { normal: 'Normal', important: '⭐ Viktigt', urgent: '🔴 Akut', other: '🔖 Övrigt' }[p] ?? p; }
+function statusLabel(s)   { return { 'to-pack': 'Att packa', 'packed': '✅ Packad', 'delivered': '🏪 Levererad', 'other': '🔖 Övrigt' }[s] ?? s; }
 function filterEmptyText(f) {
   return { today: 'Inga poster för idag', tomorrow: 'Inga poster för imorgon', important: 'Inga viktiga poster', all: 'Tryck + för att lägga till din första post' }[f] || '';
 }

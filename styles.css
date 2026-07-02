@@ -555,6 +555,7 @@ html.fx .hero-card { animation: heroFloat 7s ease-in-out infinite; }
 .badge-normal     { background: var(--c-border-soft);  color: var(--c-text-muted); }
 .badge-important  { background: var(--c-warning-soft); color: var(--c-warning); }
 .badge-urgent     { background: var(--c-error-soft);   color: var(--c-urgent); }
+.badge-other      { background: var(--c-gold-soft);    color: #9A6E14; }
 
 /* ═══════════════════════════════════════════════
    COMPONENTS — Filter chips

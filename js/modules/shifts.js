@@ -139,24 +139,24 @@ export function openShiftModal(editId = null) {
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Starttid <span>*</span></label>
-            <input type="time" name="startTime" id="field-startTime" class="form-input" value="${s?.startTime || '08:00'}" required>
+            <input type="time" name="startTime" id="field-startTime" class="form-input" value="${s?.startTime || '07:00'}" required>
           </div>
           <div class="form-group">
             <label class="form-label">Sluttid <span>*</span></label>
-            <input type="time" name="endTime" id="field-endTime" class="form-input" value="${s?.endTime || '17:00'}" required>
+            <input type="time" name="endTime" id="field-endTime" class="form-input" value="${s?.endTime || '16:00'}" required>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Rast (minuter)</label>
-            <input type="number" name="breakMinutes" class="form-input" value="${s?.breakMinutes ?? 30}" min="0" max="240">
+            <input type="number" name="breakMinutes" class="form-input" value="${s?.breakMinutes ?? 0}" min="0" max="240">
           </div>
           <div class="form-group">
             <label class="form-label">Status</label>
             <select name="status" class="form-select">
-              <option value="planned" ${!s || s.status==='planned' ? 'selected':''}>Planerat</option>
-              <option value="worked"  ${s?.status==='worked'       ? 'selected':''}>Jobbat</option>
+              <option value="planned" ${s?.status==='planned'      ? 'selected':''}>Planerat</option>
+              <option value="worked"  ${!s || s.status==='worked'  ? 'selected':''}>Jobbat</option>
               <option value="sick"    ${s?.status==='sick'         ? 'selected':''}>Sjuk</option>
               <option value="off"     ${s?.status==='off'          ? 'selected':''}>Ledig</option>
             </select>

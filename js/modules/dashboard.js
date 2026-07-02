@@ -226,10 +226,10 @@ function buildChecklist(state, todayStr, tomorrowStr, nextShift, unpackedCount) 
 }
 
 function statusIcon(status) {
-  return { 'to-pack': '📦', 'packed': '✅', 'delivered': '🏪' }[status] ?? '📦';
+  return { 'to-pack': '📦', 'packed': '✅', 'delivered': '🏪', 'other': '🔖' }[status] ?? '📦';
 }
 function statusLabel(status) {
-  return { 'to-pack': 'Att packa', 'packed': 'Packad', 'delivered': 'Levererad' }[status] ?? status;
+  return { 'to-pack': 'Att packa', 'packed': 'Packad', 'delivered': 'Levererad', 'other': 'Övrigt' }[status] ?? status;
 }
 function itemRowsSummary(rows) {
   if (!rows?.length) return '';
