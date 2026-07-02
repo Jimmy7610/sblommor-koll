@@ -2,7 +2,7 @@
    Blompasset — Service Worker
    ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'blompasset-v7';
+const CACHE_VERSION = 'blompasset-v8';
 const CACHE_STATIC  = `${CACHE_VERSION}-static`;
 const CACHE_DYNAMIC = `${CACHE_VERSION}-dynamic`;
 
@@ -68,21 +68,23 @@ self.addEventListener('fetch', (event) => {
                  request.url.startsWith('https://fonts.gstatic.com');
   if (!request.url.startsWith(self.location.origin) && !isFont) return;
 
+  // Nätverk först: alltid färsk version när man är online.
+  // Cachen används bara som reserv när nätet saknas (offline-läge).
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-
-      return fetch(request).then((response) => {
-        if (!response || response.status !== 200 || response.type === 'opaque') return response;
+    fetch(request).then((response) => {
+      if (response && response.status === 200 && response.type !== 'opaque') {
         const clone = response.clone();
         caches.open(CACHE_DYNAMIC).then((cache) => cache.put(request, clone));
-        return response;
-      }).catch(() => {
+      }
+      return response;
+    }).catch(() =>
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
         if (request.headers.get('Accept')?.includes('text/html')) {
           return caches.match('./index.html');
         }
-      });
-    })
+      })
+    )
   );
 });
 
